@@ -26,4 +26,15 @@ public class DataSourceConfig {
 		
 		return dataSource;
 	}
+	
+	@Bean
+	public DataSource mysql2DataSource() {
+		DriverManagerDataSource dataSource = new DriverManagerDataSource();
+		dataSource.setDriverClassName(env.getProperty("spring.db2.datasource.driverClassName"));
+		dataSource.setUrl(env.getProperty("spring.db2.datasource.url"));
+		dataSource.setUsername(env.getProperty("spring.db2.datasource.username"));
+		dataSource.setPassword(env.getProperty("spring.db2.datasource.password"));
+		
+		return dataSource;
+	}
 }

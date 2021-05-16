@@ -1,5 +1,8 @@
 package com.batch;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 import javax.sql.DataSource;
 
 import org.springframework.batch.core.Job;
@@ -10,6 +13,7 @@ import org.springframework.batch.core.configuration.annotation.StepBuilderFactor
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
@@ -18,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.RowMapper;
 
 @Configuration
 @EnableBatchProcessing
@@ -33,17 +38,27 @@ public class BatchConfiguration {
   public DataSourceConfig dataSource;
 
   @Bean
-  public FlatFileItemReader<Person> reader() {
-    return new FlatFileItemReaderBuilder<Person>()
-      .name("personItemReader")
-      .resource(new ClassPathResource("sample-data.csv"))
-      .delimited()
-      .names(new String[]{"firstName", "lastName"})
-      .fieldSetMapper(new BeanWrapperFieldSetMapper<Person>() {{
-        setTargetType(Person.class);
-      }})
-      .build();
+  public JdbcCursorItemReader<Person> reader() {
+	  JdbcCursorItemReader<Person> reader = new JdbcCursorItemReader<Person>();
+	  reader.setDataSource(dataSource.mysql1DataSource());
+	  reader.setSql("SELECT firstName, lastName FROM people");
+	  reader.setRowMapper(new UserRowMapper());
+	  
+	  return reader;
   }
+  
+  public class UserRowMapper implements RowMapper<Person>{
+
+	  @Override
+	  public Person mapRow(ResultSet rs, int rowNum) throws SQLException {
+	   Person user = new Person();
+	   user.setFirstName(rs.getString("firstName"));
+	   user.setLastName(rs.getString("lastName"));
+	   
+	   return user;
+	  }
+	  
+	 }
 
   @Bean
   public PersonItemProcessor processor() {
@@ -55,7 +70,7 @@ public class BatchConfiguration {
     return new JdbcBatchItemWriterBuilder<Person>()
       .itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>())
       .sql("INSERT INTO people (firstName, lastName) VALUES (:firstName, :lastName)")
-      .dataSource(dataSource.mysql1DataSource())
+      .dataSource(dataSource.mysql2DataSource())
       .build();
   }
   
